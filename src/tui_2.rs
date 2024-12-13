@@ -1,17 +1,17 @@
 use std::{fs::{self, File}, io::{self, Write}, time::Duration};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    backend::TestBackend, buffer::Buffer, layout::Rect, style::Stylize, symbols::border, text::{Line, Text}, widgets::{Block, Paragraph, Widget}, DefaultTerminal, Frame, Terminal
+    backend::TestBackend, buffer::Buffer, layout::Rect, style::Stylize, symbols::border, text::{Line, Text}, widgets::{Block, Paragraph, Widget}, Frame, Terminal
 };
 // ANCHOR_END: imports
 
-pub fn init() -> io::Result<()> {
-    let contents = fs::read_to_string("resize.txt").unwrap().split(',')
+pub fn init(width: u16, height:u16) -> io::Result<()> {
+    let contents = fs::read_to_string("resize.txt").expect("TUI FS ERROR").split(',')
         .map(|s| s.parse().expect("Failed to parse"))
         .collect::<Vec<u16>>();
-    let width = contents[0]/25;
-    let height = contents[1]/50;
+    println!("TUI; {:?}",contents);
+    let width = contents[0];
+    let height = contents[1];
     
     
     let backend = TestBackend::new(width,height); // Simulates a terminal with 80x24 size
@@ -70,9 +70,9 @@ impl App {
     // }
     // ANCHOR_END: handle_key_event fn
 
-    fn exit(&mut self) {
-        self.exit = true;
-    }
+    // fn exit(&mut self) {
+    //     self.exit = true;
+    // }
 
     fn increment_counter(&mut self) {
         if self.counter != 255 {
@@ -116,7 +116,6 @@ impl Widget for &App {
             .render(area, buf);
 
         frame_to_file(buf).expect("couldnt frame to file");
-        let frame = format!("{:?}",buf);
     }
 }
 

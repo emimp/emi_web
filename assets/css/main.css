@@ -27,10 +27,6 @@ article, aside, details, figcaption, figure,
 footer, header, hgroup, menu, nav, section {
   display: block; }
 
-canvas {
-  border: 5px solid #333;
-}
-
 body {
   line-height: 1; }
 

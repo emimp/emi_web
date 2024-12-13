@@ -3,8 +3,8 @@ let width = window.innerWidth;
 let height = window.innerHeight;
 
 let canvas = document.getElementById('tuiCanvas');
-canvas.width = width - (width * 0.1);
-canvas.height = height - (height * 0.1);
+canvas.width = width;
+canvas.height = height;
 
 const ctx = canvas.getContext('2d');
 ctx.font = '32px monospace';
@@ -21,24 +21,22 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-
-
 // Establish WebSocket connection
-const socket = new WebSocket('ws://127.0.0.1:3001/ws');
+const socket = new WebSocket('ws://192.168.1.214:3000/ws');
 
 socket.onopen = () => {
   console.log('Connected to WebSocket');
-  const swidth = window.innerWidth;
-  const sheight = window.innerHeight;
+  const swidth = Math.floor(canvas.width/64);
+  const sheight = Math.floor(canvas.height/32);
 
-  // Send the width and height to the WebSocket server
+//   Send the width and height to the WebSocket server
   const resize = {
       type: 'resize',
       swidth: swidth,
       sheight: sheight
   };
   socket.send(JSON.stringify(resize)); // Send the keyPress object as a JSON string
-  console.log(resize)// Logging to the console for verification
+  console.log(resize, "HUHH")// Logging to the console for verification
 };
 
 socket.onmessage = (event) => {
@@ -82,7 +80,7 @@ const content = contentMatch
 
 function renderTUI(area, content) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const lineHeight = 32; // Adjust based on font size
