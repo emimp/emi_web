@@ -4,16 +4,18 @@ use std::{
     time::Duration,
 };
 
+use color_eyre::owo_colors::OwoColorize;
 use ratatui::{
     backend::TestBackend,
     buffer::Buffer,
-    layout::Rect,
+    layout::{Direction, Layout, Rect},
     style::Stylize,
     symbols::border,
     text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
+    widgets::{Block, Paragraph, Tabs, Widget},
     Frame, Terminal,
 };
+use tui_big_text::{BigText, PixelSize};
 
 pub fn init(width: u16, height: u16) -> io::Result<()> {
     let backend = TestBackend::new(width, height); // Simulates a terminal with 80x24 size
@@ -61,7 +63,8 @@ impl App {
 
             // Clear the file only after handling the event
             let mut file = File::create("key_log.txt").expect("Failed to create or open the file");
-            file.write_all("".as_bytes()).expect("Failed to write to file");
+            file.write_all("".as_bytes())
+                .expect("Failed to write to file");
         }
     }
 
@@ -80,14 +83,30 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        use ratatui::prelude::*;
+
+        let top_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(20), Constraint::Percentage(80)])
+            .split(area);
+
+        let bottom_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(vec![Constraint::Percentage(80), Constraint::Percentage(20)])
+        .split(top_layout[1]);
+
+        let big_text = BigText::builder()
+        .pixel_size(PixelSize::HalfHeight)
+        .style(Style::new().blue())
+        .lines(vec![
+            "Hello I'm Emi!".into(),
+            "~~~~~~~~~~~~~~".into(),
+        ])
+        .build().render(top_layout[0], buf);
+
         let title = Line::from(" Counter App Tutorial ".bold());
         let instructions = Line::from(vec![
-            " Decrement ".into(),
-            "<Left>".blue().bold(),
-            " Increment ".into(),
-            "<Right>".blue().bold(),
-            " Quit ".into(),
-            "<Q> ".blue().bold(),
+            " Decrement <Left> Increment <Right> Quit <Q> ".into()
         ]);
         let block = Block::bordered()
             .title(title.centered())
@@ -102,12 +121,13 @@ impl Widget for &App {
         Paragraph::new(counter_text)
             .centered()
             .block(block)
-            .render(area, buf);
+            .render(bottom_layout[0], buf);
 
         // Only write to the file if the counter has changed
-        if self.counter != 0 {
-            frame_to_file(buf).expect("couldn't write frame to file");
-        }
+        Paragraph::new("https://stackoverflow.com/questions/71345070/creating-a-2d-color-gradient-based-on-rgb-values-in-matplotlib").block(Block::bordered()).render(bottom_layout[1], buf);
+        
+        frame_to_file(buf).expect("couldn't write frame to file");
+
     }
 }
 

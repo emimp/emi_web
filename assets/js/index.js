@@ -7,7 +7,7 @@ canvas.width = width;
 canvas.height = height;
 
 const ctx = canvas.getContext('2d');
-ctx.font = `25px monospace`;
+ctx.font = `27px monospace`;
 
 ctx.textBaseline = 'top';
 document.addEventListener('keydown', (event) => {
@@ -60,7 +60,7 @@ socket.onclose = () => {
 
 function renderTUI(area, content) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+	ctx.fillStyle = 'rgba(0, 0, 0, 0)';
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
   
 	const lineHeight = 32; // Adjust based on font size

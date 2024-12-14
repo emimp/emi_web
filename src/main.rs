@@ -42,6 +42,7 @@ async fn main() {
     };
     //http://192.168.1.214:3000/
     //TODO make it so other devices have their own tui not just one shared one
+    //TODO Immage functionallity
     let router = Router::new()
         .route("/", get(root_get))
         .route("/ws", get(ui_websocket))
@@ -126,7 +127,6 @@ fn read_buffer_with_retry_to_json() -> String {
             fs::read_to_string("output.txt").expect("Should have been able to read the file");
 
         if file_contents.is_empty() {
-            println!("File is empty, retrying...");
             std::thread::sleep(Duration::from_millis(10)); // Adjust time as needed
         }
     }
