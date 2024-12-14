@@ -1,20 +1,23 @@
-use std::{fs::{self, File}, io::{self, Write}, time::Duration};
+use std::{
+    fs::{self, File},
+    io::{self, Write},
+    time::Duration,
+};
 
 use ratatui::{
-    backend::TestBackend, buffer::Buffer, layout::Rect, style::Stylize, symbols::border, text::{Line, Text}, widgets::{Block, Paragraph, Widget}, Frame, Terminal
+    backend::TestBackend,
+    buffer::Buffer,
+    layout::Rect,
+    style::Stylize,
+    symbols::border,
+    text::{Line, Text},
+    widgets::{Block, Paragraph, Widget},
+    Frame, Terminal,
 };
 // ANCHOR_END: imports
 
-pub fn init(width: u16, height:u16) -> io::Result<()> {
-    let contents = fs::read_to_string("resize.txt").expect("TUI FS ERROR").split(',')
-        .map(|s| s.parse().expect("Failed to parse"))
-        .collect::<Vec<u16>>();
-    println!("TUI; {:?}",contents);
-    let width = contents[0];
-    let height = contents[1];
-    
-    
-    let backend = TestBackend::new(width,height); // Simulates a terminal with 80x24 size
+pub fn init(width: u16, height: u16) -> io::Result<()> {
+    let backend = TestBackend::new(width, height); // Simulates a terminal with 80x24 size
     let terminal = ratatui::Terminal::new(backend).unwrap();
     let app_result = App::default().run(terminal);
     ratatui::restore();
@@ -32,7 +35,10 @@ pub struct App {
 // ANCHOR: impl App
 impl App {
     /// runs the application's main loop until the user quits
-    pub fn run<T: ratatui::backend::Backend>(&mut self, mut terminal: Terminal<T>) -> io::Result<()> {
+    pub fn run<T: ratatui::backend::Backend>(
+        &mut self,
+        mut terminal: Terminal<T>,
+    ) -> io::Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             // self.handle_events()?;
@@ -57,22 +63,9 @@ impl App {
             _ => {}
         }
         let mut file = File::create("key_log.txt").expect("Failed to create or open the file");
-        file.write_all( "".as_bytes()).expect("Failed to write to file");
+        file.write_all("".as_bytes())
+            .expect("Failed to write to file");
     }
-    // ANCHOR: handle_key_event fn
-    // fn handle_key_event(&mut self, key_event: KeyEvent) {
-    //     match key_event.code {
-    //         KeyCode::Char('q') => self.exit(),
-    //         KeyCode::Left => self.decrement_counter(),
-    //         KeyCode::Right => self.increment_counter(),
-    //         _ => {}
-    //     }
-    // }
-    // ANCHOR_END: handle_key_event fn
-
-    // fn exit(&mut self) {
-    //     self.exit = true;
-    // }
 
     fn increment_counter(&mut self) {
         if self.counter != 255 {
@@ -119,8 +112,8 @@ impl Widget for &App {
     }
 }
 
-fn frame_to_file (buf:& mut Buffer) -> io::Result<()> {
-    let t = format!("{:?}",buf);
+fn frame_to_file(buf: &mut Buffer) -> io::Result<()> {
+    let t = format!("{:?}", buf);
     let mut file = File::create("output.txt").expect("msg");
     file.write_all(t.as_bytes())
 }

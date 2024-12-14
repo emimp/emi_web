@@ -7,12 +7,11 @@ canvas.width = width;
 canvas.height = height;
 
 const ctx = canvas.getContext('2d');
-ctx.font = '32px monospace';
-ctx.textBaseline = 'top';
+ctx.font = `25px monospace`;
 
+ctx.textBaseline = 'top';
 document.addEventListener('keydown', (event) => {
   const keyPress = {
-      type: 'key',
       key: event.key, // This captures the key pressed (e.g., 'ArrowRight')
   };
   if (socket.readyState === WebSocket.OPEN) {
@@ -22,30 +21,33 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Establish WebSocket connection
-const socket = new WebSocket('ws://192.168.1.214:3000/ws');
+const socket = new WebSocket('ws://192.168.1.213:3001/ws');
 
 socket.onopen = () => {
   console.log('Connected to WebSocket');
-  const swidth = Math.floor(canvas.width/64);
-  const sheight = Math.floor(canvas.height/32);
+  let c = calculateMaxChars(canvas, fontSize = 30, fontFamily = 'monospace')
+  console.log("MAX: ", c);
+  const canvasResolution = {
+		width: c.maxCharsX,
+		height: c.maxLinesY,
+	};
+	socket.send(JSON.stringify(canvasResolution));
+};
 
-//   Send the width and height to the WebSocket server
-  const resize = {
-      type: 'resize',
-      swidth: swidth,
-      sheight: sheight
+socket.onmessage = function(event) {
+	// console.log("Raw data from WebSocket:", event.data); // Log raw data for debugging
+	try {
+	  // Parse the incoming data as JSON
+	  const data = JSON.parse(JSON.parse(event.data));
+	  let area = data.area;
+	  let content = data.content
+	  renderTUI(area, content)
+  
+	} catch (error) {
+	  console.error('Error parsing data:', error); // Log any parsing errors
+	}
   };
-  socket.send(JSON.stringify(resize)); // Send the keyPress object as a JSON string
-  console.log(resize, "HUHH")// Logging to the console for verification
-};
-
-socket.onmessage = (event) => {
-  const input = event.data;
-  const { area, content } = parseBuffer(input);
-  if (area && content.length > 0) {
-    renderTUI(area, content);
-  }
-};
+  
 
 socket.onerror = (error) => {
   console.error('WebSocket error:', error);
@@ -55,45 +57,37 @@ socket.onclose = () => {
   console.log('Disconnected from WebSocket');
 };
 
-function parseBuffer(bufferText) {
-  const areaMatch = bufferText.match(/area:\s*Rect\s*{\s*x:\s*(\d+),\s*y:\s*(\d+),\s*width:\s*(\d+),\s*height:\s*(\d+)\s*}/);
-  const contentMatch = bufferText.match(/content:\s*\[(.*?)\],/s);
-
-  const area = areaMatch
-    ? {
-        x: parseInt(areaMatch[1]),
-        y: parseInt(areaMatch[2]),
-        width: parseInt(areaMatch[3]),
-        height: parseInt(areaMatch[4]),
-      }
-    : null;
-
-const content = contentMatch
-    ? contentMatch[1]
-        .split(',')
-        .map((line) => line.trim().replace(/^\\n|\\n$|^"|"$/g, '').replace(/\\/g, '').replace(/"/g, '').replace(/^\s+/g, ''))  // Remove leading spaces
-        .filter((line) => line.length > 0) // Remove empty lines
-    : []
-
-  return { area, content };
-}
 
 function renderTUI(area, content) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const lineHeight = 32; // Adjust based on font size
-  for (let y = 0; y < content.length; y++) {
-    const text = content[y];
-    const x = area.x * 10; // Scale for visual positioning
-    const posY = area.y * 10 + y * lineHeight;
-
-    ctx.fillStyle = '#d4d4d4';
-
-   
-    ctx.fillText(text, x, posY);
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+	const lineHeight = 32; // Adjust based on font size
+	for (let y = 0; y < content.length; y++) {
+	  // Remove quotation marks from the text
+	  const text = content[y].replace(/['"]/g, '');
+	  const x = area.x * 10; // Scale for visual positioning
+	  const posY = area.y * 10 + y * lineHeight;
+  
+	  ctx.fillStyle = '#d4d4d4';
+  
+	  ctx.fillText(text, x, posY);
+	}
   }
+  
+  function calculateMaxChars(canvas, fontSize, fontFamily) {
+    const ctx = canvas.getContext('2d');
+
+    const charWidth = ctx.measureText("W").width;
+    const maxCharsX = Math.floor(canvas.width / charWidth);
+    const lineHeight = fontSize * 1.05;
+    const maxLinesY = Math.floor(canvas.height / lineHeight);
+
+    return {
+        maxCharsX,
+        maxLinesY
+    };
 }
 
 (function() {
@@ -261,3 +255,6 @@ function renderTUI(area, content) {
 		})();
 
 })();
+
+
+  
