@@ -15,16 +15,15 @@ use axum::{
     routing::{get, get_service},
     Router,
 };
-use ratatui::buffer;
 use serde_json::Value;
 use tokio::sync::{broadcast, Mutex};
 use tower_http::services::ServeDir;
 use uuid::Uuid;
 
-use tui_2::init;
+use tui::init;
 
 mod parse_frame;
-mod tui_2;
+mod tui;
 
 type Frame = String;
 type TerminalState = Arc<Mutex<HashMap<Uuid, String>>>;
@@ -32,14 +31,14 @@ type TerminalState = Arc<Mutex<HashMap<Uuid, String>>>;
 #[derive(Clone, Debug)]
 struct AppState {
     tx: broadcast::Sender<Frame>,
-    terminals: TerminalState,
+    _terminals: TerminalState,
 }
 #[tokio::main]
 async fn main() {
     let (tx, _) = broadcast::channel::<Frame>(1);
     let app_state = AppState {
         tx: tx.clone(),
-        terminals: Arc::new(Mutex::new(HashMap::new())),
+        _terminals: Arc::new(Mutex::new(HashMap::new())),
     };
     //http://192.168.1.214:3000/
     //TODO make it so other devices have their own tui not just one shared one
@@ -115,7 +114,7 @@ async fn realtime_websocket_stream(app_state: AppState, mut ws: WebSocket) {
 
 fn log_from_socket(key: &str, path_name: &str) {
     let mut file = File::create(path_name).expect("Failed to create or open the file");
-    file.write_all(format!("{}", key).as_bytes())
+    file.write_all(key.to_string().as_bytes())
         .expect("Failed to write to file");
 }
 
@@ -134,6 +133,5 @@ fn read_buffer_with_retry_to_json() -> String {
 
     // Once the file is not empty, parse the buffer
     let buffer = parse_frame::Buffer::from_string(&file_contents);
-    serde_json::to_string(&buffer)
-        .expect("Serde Json TO string error")
+    serde_json::to_string(&buffer).expect("Serde Json TO string error")
 }

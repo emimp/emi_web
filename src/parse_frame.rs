@@ -23,10 +23,19 @@ pub struct Buffer {
     styles: Vec<Style>,
 }
 
+// Precompiled regex patterns to avoid recompiling them multiple times
+lazy_static::lazy_static! {
+    static ref AREA_RE: Regex = Regex::new(r"x: (\d+), y: (\d+), width: (\d+), height: (\d+)").unwrap();
+    static ref STYLES_RE: Regex = Regex::new(r"x: (\d+), y: (\d+), fg: (\w+)").unwrap();
+    static ref BUFFER_RE: Regex = Regex::new(r"area: Rect \{([\s\S]+?)\}").unwrap();
+    static ref STYLES_BUFFER_RE: Regex = Regex::new(r"styles: \[([\s\S]+?)\]").unwrap();
+    static ref CONTENT_RE: Regex = Regex::new(r"content: \[([\s\S]+?)]").unwrap();
+}
+
 impl Buffer {
     fn parse_area(data: &str) -> Rect {
-        let re = Regex::new(r"x: (\d+), y: (\d+), width: (\d+), height: (\d+)").unwrap();
-        if let Some(caps) = re.captures(data) {
+        // Matching area data and parsing fields
+        if let Some(caps) = AREA_RE.captures(data) {
             Rect {
                 x: caps[1].parse().unwrap(),
                 y: caps[2].parse().unwrap(),
@@ -44,67 +53,39 @@ impl Buffer {
     }
 
     fn parse_styles(data: &str) -> Vec<Style> {
-        let re = Regex::new(r"x: (\d+), y: (\d+), fg: (\w+)").unwrap();
-        let mut styles = Vec::new();
-
-        for caps in re.captures_iter(data) {
-            let style = Style {
+        // Capture and parse style data
+        STYLES_RE
+            .captures_iter(data)
+            .map(|caps| Style {
                 x: caps[1].parse().unwrap(),
                 y: caps[2].parse().unwrap(),
                 fg: caps[3].to_string(),
-            };
-            styles.push(style);
-        }
-
-        styles
+            })
+            .collect()
     }
 
     pub fn from_string(buffer_str: &str) -> Self {
-        // Corrected regex to handle multiline data properly
-        let area_re = Regex::new(r"area: Rect \{([\s\S]+?)\}").expect("Invalid regex for area");
-        let styles_re = Regex::new(r"styles: \[([\s\S]+?)\]").expect("Invalid regex for styles");
-        let content_re = Regex::new(r"content: \[([\s\S]+?)]").expect("Invalid regex for content");
+        // Use the precompiled regex to parse different parts
+        let area_data = BUFFER_RE
+            .captures(buffer_str)
+            .and_then(|caps| caps.get(1).map(|m| m.as_str()))
+            .unwrap_or("");
 
-        // Debugging output
+        let styles_data = STYLES_BUFFER_RE
+            .captures(buffer_str)
+            .and_then(|caps| caps.get(1).map(|m| m.as_str()))
+            .unwrap_or("");
 
-        let area_data = match area_re.captures(buffer_str) {
-            Some(caps) => caps
-                .get(1)
-                .map_or_else(|| "".to_string(), |m| m.as_str().to_string()),
-            None => {
-                eprintln!("Failed to parse area data, raw input: {}", buffer_str);
-                println!("Buffer Input:\n{}", buffer_str);
-                String::new()
-            }
-        };
+        let content: Vec<String> = CONTENT_RE
+            .captures(buffer_str)
+            .and_then(|caps| caps.get(1).map(|m| m.as_str()))
+            .unwrap_or("")
+            .split(",\n")
+            .map(|s| s.trim().to_string())
+            .collect();
 
-        let styles_data = match styles_re.captures(buffer_str) {
-            Some(caps) => caps
-                .get(1)
-                .map_or_else(|| "".to_string(), |m| m.as_str().to_string()),
-            None => {
-                eprintln!("Failed to parse styles data, raw input: {}", buffer_str);
-                String::new()
-            }
-        };
-
-        let content: Vec<String> = match content_re.captures(buffer_str) {
-            Some(caps) => caps
-                .get(1)
-                .map_or_else(|| "".to_string(), |m| m.as_str().to_string())
-                .split(",\n")
-                .map(|s| s.trim().to_string())
-                .collect(),
-            None => {
-                eprintln!("Failed to parse content data, raw input: {}", buffer_str);
-                Vec::new()
-            }
-        };
-
-        // Debugging parsed data
-
-        let area = Buffer::parse_area(&area_data);
-        let styles = Buffer::parse_styles(&styles_data);
+        let area = Buffer::parse_area(area_data);
+        let styles = Buffer::parse_styles(styles_data);
 
         Buffer {
             area,
