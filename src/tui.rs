@@ -1,8 +1,5 @@
 use std::{
-    fs::{self, File},
-    io::{self, Write},
-    path::Path,
-    time::Duration,
+    fs::{self, File}, io::{self, Write}, path::Path, thread, time::Duration
 };
 
 use ratatui::{
@@ -56,15 +53,6 @@ impl App {
     fn check_exit(&mut self) {
         let uuid = &self.uuid;
         if Path::new(&format!("temp/{uuid}.remove")).exists() {
-            let clone = uuid.clone();
-            tokio::spawn(async move {
-                let uuid = clone;
-                if Path::new(&format!("temp/{uuid}.remove")).exists() {
-                    tokio::fs::remove_file(&format!("temp/{uuid}.remove")).await.unwrap();
-                    tokio::fs::remove_file(&format!("temp/{uuid}.output")).await.unwrap();
-                }
-            });
-            // fs::remove_file(&format!("temp/{uuid}.kl")).unwrap();
             self.exit = true;
         }
     }

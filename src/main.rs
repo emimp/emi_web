@@ -25,10 +25,12 @@ mod tui;
 type Frame = String;
 type UserDimensions = Arc<Mutex<HashMap<Uuid, (u16, u16)>>>; // Stores dimensions per client UUID
 type ClientChannels = Arc<Mutex<HashMap<Uuid, mpsc::Sender<Frame>>>>; // Channels to send TUI frames
+type CloseFrameSender = Arc<Mutex<HashMap<Uuid, bool>>>;
 #[derive(Clone, Debug)]
 struct AppState {
     client_tui_tx: ClientChannels,
     user_dimensions: UserDimensions,
+    close_frame_sender: CloseFrameSender
 }
 
 #[tokio::main]
@@ -36,6 +38,7 @@ async fn main() {
     let app_state = AppState {
         client_tui_tx: Arc::new(Mutex::new(HashMap::new())),
         user_dimensions: Arc::new(Mutex::new(HashMap::new())),
+        close_frame_sender: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let router = Router::new()
@@ -45,7 +48,7 @@ async fn main() {
         .nest_service("/images", get_service(ServeDir::new("images")))
         .with_state(app_state.clone());
 
-    let listener = tokio::net::TcpListener::bind("192.168.1.214:3001")
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3001")
         .await
         .unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
@@ -127,6 +130,11 @@ async fn realtime_websocket_stream(app_state: AppState, mut ws: WebSocket, uuid:
             println!("{:?}",user_dimensions);
 
         }
+        {
+            let mut close_frame_sender = app_state.close_frame_sender.lock().await;
+            close_frame_sender.insert(uuid, true);
+            println!("{:?}", close_frame_sender)
+        }
         println!("path");
         File::create(format!("temp/{uuid}.remove")).unwrap();
 
@@ -141,6 +149,7 @@ async fn init_and_stream_tui(app_state: AppState, uuid: Uuid, width: u16, height
     let tui_output_file = format!("temp/{uuid}.output");
 
     loop {
+        println!("RUNNING: {}",uuid);
         let frame = read_buffer_with_retry_to_json(&tui_output_file);
         let client_tx = {
             let client_tui_tx = app_state.client_tui_tx.lock().await;
@@ -153,6 +162,9 @@ async fn init_and_stream_tui(app_state: AppState, uuid: Uuid, width: u16, height
             }
         }
 
+        if *app_state.close_frame_sender.lock().await.get(&uuid).unwrap_or(&false) {
+            break
+        }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
@@ -171,18 +183,4 @@ fn read_buffer_with_retry_to_json(file_path: &str) -> String {
 
     let buffer = parse_frame::Buffer::from_string(&file_contents);
     serde_json::to_string(&buffer).expect("Failed to serialize buffer to JSON")
-}
-
-async fn cleanup_after_disconnect(app_state: Arc<AppState>, uuid: Uuid) {
-    println!("removing {}", &uuid);
-    File::create(format!("temp/{}.remove", uuid));
-
-    {
-        let mut client_tui_tx = app_state.client_tui_tx.lock().await;
-        client_tui_tx.remove(&uuid);
-    }
-    {
-        let mut user_dimensions = app_state.user_dimensions.lock().await;
-        user_dimensions.remove(&uuid);
-    }
 }

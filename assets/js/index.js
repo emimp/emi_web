@@ -21,7 +21,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Establish WebSocket connection
-const socket = new WebSocket('ws://192.168.1.214:3001/ws');
+const socket = new WebSocket('ws://127.0.0.1:3001/ws');
 
 socket.onopen = () => {
   console.log('Connected to WebSocket');
