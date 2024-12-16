@@ -21,7 +21,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Establish WebSocket connection
-const socket = new WebSocket('ws://192.168.1.213:3001/ws');
+const socket = new WebSocket('ws://192.168.1.214:3001/ws');
 
 socket.onopen = () => {
   console.log('Connected to WebSocket');
@@ -35,10 +35,9 @@ socket.onopen = () => {
 };
 
 socket.onmessage = function(event) {
-	// console.log("Raw data from WebSocket:", event.data); // Log raw data for debugging
 	try {
 	  // Parse the incoming data as JSON
-	  const data = JSON.parse(JSON.parse(event.data));
+	  const data = JSON.parse(event.data);
 	  let area = data.area;
 	  let content = data.content
 	  renderTUI(area, content)

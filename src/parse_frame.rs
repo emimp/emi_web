@@ -81,7 +81,12 @@ impl Buffer {
             .and_then(|caps| caps.get(1).map(|m| m.as_str()))
             .unwrap_or("")
             .split(",\n")
-            .map(|s| s.trim().to_string())
+            .map(|s| {
+                s.trim()
+                    .trim_matches('"') // Remove surrounding quotes
+                    .replace("\\\"", "\"") // Replace escaped quotes
+                    .to_string()
+            })
             .collect();
 
         let area = Buffer::parse_area(area_data);

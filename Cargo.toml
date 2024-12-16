@@ -14,10 +14,15 @@ color-eyre = "0.6.3"
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 ratatui = "0.29.0"
 futures = "0.3"
-uuid = "1.11.0"
+uuid = {version = "1.11.0", features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]}
 regex = "1.11.1"
 lazy_static = "1.5.0"
 tui-big-text = "0.7.0"
+rayon = "1.10.0"
 
 [profile.release]
 debug = true
