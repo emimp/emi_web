@@ -75,11 +75,6 @@ impl App {
                 "ArrowRight" => self.increment_counter(),
                 _ => {}
             }
-
-            // Clear the file only after handling the event
-            let mut file = File::create("key_log.txt").expect("Failed to create or open the file");
-            file.write_all("".as_bytes())
-                .expect("Failed to write to file");
         }
     }
 
