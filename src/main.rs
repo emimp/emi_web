@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, sync::Arc, thread::spawn, time::Duration};
+use std::{collections::HashMap, fs::File, io::Write, sync::Arc, thread::spawn, time::Duration};
 
 use axum::{
     extract::{
@@ -30,7 +30,7 @@ type CloseFrameSender = Arc<Mutex<HashMap<Uuid, bool>>>;
 struct AppState {
     client_tui_tx: ClientChannels,
     user_dimensions: UserDimensions,
-    close_frame_sender: CloseFrameSender
+    close_frame_sender: CloseFrameSender,
 }
 
 #[tokio::main]
@@ -91,6 +91,9 @@ async fn realtime_websocket_stream(app_state: AppState, mut ws: WebSocket, uuid:
             }
             Some(Ok(Message::Text(text))) = ws.recv() => {
                 if let Ok(value) = serde_json::from_str::<Value>(&text) {
+                    if let Some(key) = value.get("key") {
+                        log_from_socket(key.as_str().unwrap(), &format!("temp/{uuid}.kl"));
+                    }
                     if let (Some(width), Some(height)) = (value.get("width"), value.get("height")) {
                         let (width, height) = (
                             width.as_u64().unwrap_or_default() as u16,
@@ -121,14 +124,12 @@ async fn realtime_websocket_stream(app_state: AppState, mut ws: WebSocket, uuid:
         {
             let mut client_tui_tx = app_state.client_tui_tx.lock().await;
             client_tui_tx.remove(&uuid);
-            println!("{:?}",client_tui_tx);
-
+            println!("{:?}", client_tui_tx);
         }
         {
             let mut user_dimensions = app_state.user_dimensions.lock().await;
             user_dimensions.remove(&uuid);
-            println!("{:?}",user_dimensions);
-
+            println!("{:?}", user_dimensions);
         }
         {
             let mut close_frame_sender = app_state.close_frame_sender.lock().await;
@@ -137,7 +138,6 @@ async fn realtime_websocket_stream(app_state: AppState, mut ws: WebSocket, uuid:
         }
         println!("path");
         File::create(format!("temp/{uuid}.remove")).unwrap();
-
     }
 }
 
@@ -147,9 +147,9 @@ async fn init_and_stream_tui(app_state: AppState, uuid: Uuid, width: u16, height
     });
 
     let tui_output_file = format!("temp/{uuid}.output");
+    println!("RUNNING: {}", uuid);
 
     loop {
-        println!("RUNNING: {}",uuid);
         let frame = read_buffer_with_retry_to_json(&tui_output_file);
         let client_tx = {
             let client_tui_tx = app_state.client_tui_tx.lock().await;
@@ -162,8 +162,14 @@ async fn init_and_stream_tui(app_state: AppState, uuid: Uuid, width: u16, height
             }
         }
 
-        if *app_state.close_frame_sender.lock().await.get(&uuid).unwrap_or(&false) {
-            break
+        if *app_state
+            .close_frame_sender
+            .lock()
+            .await
+            .get(&uuid)
+            .unwrap_or(&false)
+        {
+            break;
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
@@ -183,4 +189,10 @@ fn read_buffer_with_retry_to_json(file_path: &str) -> String {
 
     let buffer = parse_frame::Buffer::from_string(&file_contents);
     serde_json::to_string(&buffer).expect("Failed to serialize buffer to JSON")
+}
+
+fn log_from_socket(key: &str, path_name: &str) {
+    let mut file = File::create(path_name).expect("Failed to create or open the file");
+    file.write_all(key.to_string().as_bytes())
+        .expect("Failed to write to file");
 }

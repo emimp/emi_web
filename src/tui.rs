@@ -1,5 +1,8 @@
 use std::{
-    fs::{self, File}, io::{self, Write}, path::Path, thread, time::Duration
+    fs::{self, File},
+    io::{self, Write},
+    path::Path,
+    time::Duration,
 };
 
 use ratatui::{
@@ -37,16 +40,14 @@ impl App {
         }
     }
     /// Runs the application's main loop until the user quits
-    pub fn run<T: ratatui::backend::Backend>(
-        &mut self,
-        mut terminal: Terminal<T>,
-    ) -> io::Result<()> {
+    fn run<T: ratatui::backend::Backend>(&mut self, mut terminal: Terminal<T>) -> io::Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_web_key_event();
             self.check_exit();
             std::thread::sleep(Duration::from_millis(100));
         }
+
         Ok(())
     }
 
@@ -64,8 +65,11 @@ impl App {
     /// Updates the application's state based on user input
     fn handle_web_key_event(&mut self) {
         // Only read from the file if necessary
-        if let Ok(contents) = fs::read_to_string("key_log.txt") {
+        let path = &format!("temp/{}.kl", self.uuid);
+        if let Ok(contents) = fs::read_to_string(path) {
             let key = contents.as_str();
+            File::create(path).expect("Failed to create or open the file");
+
             match key {
                 "ArrowLeft" => self.decrement_counter(),
                 "ArrowRight" => self.increment_counter(),
